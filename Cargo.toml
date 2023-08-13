@@ -1,0 +1,15 @@
+[package]
+name = "ansimg"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ansi_term = "0.12.1"
+clap = { version = "4.3.11", features = ["derive"] }
+image = "0.24.6"
+imageproc = "0.23.0"
+rand = "0.8.5"
+regex = "1.9.1"
+rusttype = "0.9.3"
