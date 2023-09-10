@@ -148,7 +148,7 @@ fn real_main() -> ExitCode {
         Rgba([40, 40, 40, 255]),
     );
 
-    let mut color: Rgba<u8> = Rgba([0, 0, 0, 255]);
+    let mut color: Rgba<u8> = Rgba([255, 255, 255, 255]);
 
     let mut x = 0;
     let mut y = 0;
