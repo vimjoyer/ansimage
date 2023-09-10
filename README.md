@@ -7,9 +7,11 @@ A simple Rust program that generates ANSI 256-colored images from text.
 ## Cargo
 
 ```bash
-cargo build --release
+git clone https://github.com/vimjoyer/ansimage.git
+cd ansimage
+cargo install --path .
 
-./target/release/ansimg --help
+ansimg --help
 ```
 
 ## Nix (no need to clone)
