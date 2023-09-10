@@ -1,15 +1,26 @@
 [package]
 name = "ansimg"
+authors = ["Yurii Melnychenko <vimjoyer@gmail.com>", "Jackson Novak <ogloooglooagla@tutanota.com>"]
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.bench]
+lto = "thin"
+debug = 1
+strip = false
+
+[profile.release]
+debug = 0
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true
 
 [dependencies]
-ansi_term = "0.12.1"
-clap = { version = "4.3.11", features = ["derive"] }
-image = "0.24.6"
+clap = { version = "4.4.2", features = ["derive"] }
+colored = "2.0.4"
+image = "0.24.7"
 imageproc = "0.23.0"
 rand = "0.8.5"
-regex = "1.9.1"
+regex = "1.9.5"
 rusttype = "0.9.3"
