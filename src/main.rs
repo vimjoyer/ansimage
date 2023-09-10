@@ -1,66 +1,127 @@
-mod args;
+mod cli;
+mod file;
+mod misc;
+mod log;
 
-use args::ProgramArgs;
-use clap::*;
-use image::{imageops, DynamicImage, GenericImageView, Rgba};
-use imageproc::{
-    drawing::{draw_filled_rect, draw_filled_rect_mut, draw_text_mut},
-    rect::Rect,
-};
-use regex::Regex;
+use std::env;
+use std::io::{self, BufRead};
+use clap::Parser;
+use image::{DynamicImage, GenericImageView, Rgba};
+use imageproc::rect::Rect;
+use imageproc::drawing::{draw_filled_rect_mut, draw_text_mut};
 use rusttype::{Font, Scale};
-use std::{env, fs::File, io::Read};
+use regex::Regex;
+use misc::*;
+use log::*;
 
-fn remove_ansi_colors(input: &str) -> String {
-    // Create a regular expression pattern to match RGB ANSI color codes
-    let ansi_pattern = Regex::new("\x1B\\[[0-9;]*m").unwrap();
-    ansi_pattern.replace_all(input, "").into()
+#[derive(PartialEq)]
+enum ExitCode {
+    Success,
+    Fail,
 }
 
-fn include_bytes_runtime(path: &str) -> Option<Vec<u8>> {
-    let mut f = match File::open(path) {
-        Ok(file) => file,
-        Err(_) => return None, // Failed to open file or file not found
-    };
-
-    let mut buffer = Vec::new();
-    match f.read_to_end(&mut buffer) {
-        Ok(_) => Some(buffer),
-        Err(_) => None, // Failed to read from file
-    }
-}
-
-fn main() {
-    let args = ProgramArgs::parse();
+fn real_main() -> ExitCode {
+    let args = cli::Cli::parse();
 
     let font_path: String;
 
-    match env::var("ANSIMAGE_FONT") {
-        Err(_) => {
-            println!("ANSIMAGE_FONT not set");
-            std::process::exit(1)
-        }
-        Ok(value) => font_path = value,
+    match args.font {
+        Some(s) => font_path = s,
+        None => {
+            match env::var("ANSIMAGE_FONT") {
+                Ok(o) => font_path = o,
+                Err(_) => {
+                    error!("Please either specify a font path with '--font FONT_PATH', or set the environment variable: ANSIMAGE_FONT=FONT_PATH");
+
+                    return ExitCode::Fail;
+                },
+            };
+        },
     };
 
+    info!("Font: {}", font_path);
+
+    if path_exists(args.output.as_str()) {
+        if args.force == false {
+            error!("Cannot overwrite file! If you wish to bypass this, use: --force");
+
+            return ExitCode::Fail;
+        }
+
+        else {
+            warning!("Overwriting output file...");
+        }
+    }
+
     // Load the font
-    let bytes = include_bytes_runtime(&font_path).unwrap();
+    let bytes = match include_bytes_runtime(&font_path) {
+        Ok(o) => o,
+        Err(_) => {
+            error!("Failed to load font bytes from font file!");
 
-    let font = Font::try_from_bytes(&bytes).unwrap();
+            return ExitCode::Fail;
+        },
+    };
 
-    let text = args.input.as_str();
+    let font = match Font::try_from_bytes(&bytes) {
+        Some(s) => s,
+        None => {
+            error!("Retrieving font from bytes got an Option::None value!");
 
-    let result = remove_ansi_colors(text);
+            return ExitCode::Fail;
+        },
+    };
+
+    let text: String;
+
+    match args.input {
+        Some(input) => {
+            text = match path_exists(input.as_str()) {
+                true => {
+                    info!("Input from file contents...");
+                    
+                    match file::read(input.as_str()) {
+                        Ok(o) => o,
+                        Err(_e) => return ExitCode::Fail,
+                    }
+                },
+                false => {
+                    info!("Input from string...");
+                    
+                    input
+                },
+            };
+        },
+        None => {
+            info!("Input from stdin/pipe...");
+
+            let mut l_string = String::new();
+            for lr in io::stdin().lock().lines() {
+                let l = match lr {
+                    Ok(o) => o,
+                    Err(_) => {
+                        error!("Failed to get string from raw stdin line!");
+
+                        return ExitCode::Fail;
+                    },
+                };
+
+                l_string.push_str(format!("{}\n", l).as_str());
+            }
+
+            text = l_string.trim().to_string();
+        },
+    };
+
+    let result = remove_ansi_colors(text.as_str());
 
     let lines: Vec<&str> = result.split('\n').collect();
-    let max_len = lines
-        .iter()
+    let max_len = lines.iter()
         .map(|line| line.chars().count())
         .max()
         .unwrap_or(0);
 
-    // should be added as a flag
-    let glyph_height = 90.0;
+    let glyph_height = args.glyph_height.unwrap_or(90.0);
 
     // umm... uhhhh... yes
     let character = 'A';
@@ -87,7 +148,7 @@ fn main() {
         Rgba([40, 40, 40, 255]),
     );
 
-    let mut color: Rgba<u8> = Rgba([0, 0, 0, 255]);
+    let mut color: Rgba<u8> = Rgba([255, 255, 255, 255]);
 
     let mut x = 0;
     let mut y = 0;
@@ -97,14 +158,28 @@ fn main() {
 
     // horrible part, but it works
     while current < max {
-        let c = text.chars().nth(current).unwrap();
+        let c = match text.chars().nth(current) {
+            Some(s) => s,
+            None => {
+                error!("The developer failed you! Please open an issue and type: \"You have failed me! (text.chars)\"");
+
+                return ExitCode::Fail;
+            },
+        };
 
         if c == '\u{001b}' {
             let chars_left = max - current;
             let lower = std::cmp::min(chars_left, 23);
             let sub: String = text.chars().take(current + lower).skip(current).collect();
 
-            let pattern = Regex::new(r"\[[0-9;]*m").unwrap();
+            let pattern = match Regex::new(r"\[[0-9;]*m") {
+                Ok(o) => o,
+                Err(_) => {
+                    error!("Failed to create new regex pattern!");
+
+                    return ExitCode::Fail;
+                },
+            };
 
             if let Some(regex) = pattern.find(&sub) {
                 let regex_text = regex.as_str();
@@ -151,5 +226,22 @@ fn main() {
 
     // Save the image as a PNG
     let png_output = img.to_rgb16();
-    png_output.save(args.output_file).unwrap();
+    match png_output.save(args.output.as_str()) {
+        Ok(_) => {},
+        Err(_) => {
+            error!("Failed to save image!");
+
+            return ExitCode::Fail;
+        },
+    };
+
+    info!("Successfully saved to {}!", args.output);
+
+    return ExitCode::Success;
+}
+
+fn main() {
+    if real_main() == ExitCode::Fail {
+        std::process::exit(1);
+    }
 }
