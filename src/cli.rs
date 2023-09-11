@@ -21,6 +21,10 @@ pub struct Cli {
     #[clap(long)]
     pub glyph_height: Option<f32>,
 
+    /// Background color.
+    #[clap(long)]
+    pub bgcolor: Option<String>,
+
     /// Force the program to overwrite the output file.
     #[clap(long)]
     pub force: bool,

@@ -27,6 +27,7 @@ nix run github:vimjoyer/ansimage -- --help
     -o, --output <OUTPUT>          Output file
     --font <FONT>                  Font to use (the full path to the font file)
     --glyph-height <GLYPH_HEIGHT>  Height of glyphs
+    --bgcolor <BGCOLOR>            Background color e.g. "#282828"
     --force                        Force the program to overwrite the output file
     -h, --help                     Print help
     -V, --version                  Print version
