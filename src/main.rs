@@ -145,12 +145,11 @@ fn real_main() -> ExitCode {
     let (width, height) = img.dimensions();
 
     // TODO: add error handling
-    let background_color = match args.bgcolor {
+    let background_color = match args.bg_color {
         Some(color) => color_code_to_array(&color),
         None => [40, 40, 40, 255]
     };
 
-    // hard coded to gruvbox color, should be added as a flag
     draw_filled_rect_mut(
         &mut img,
         Rect::at(0, 0).of_size(width, height),

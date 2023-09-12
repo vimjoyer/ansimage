@@ -21,9 +21,9 @@ pub struct Cli {
     #[clap(long)]
     pub glyph_height: Option<f32>,
 
-    /// Background color.
+    /// Background color in hex code (Example: "#1d2021").
     #[clap(long)]
-    pub bgcolor: Option<String>,
+    pub bg_color: Option<String>,
 
     /// Force the program to overwrite the output file.
     #[clap(long)]
