@@ -233,7 +233,7 @@ fn real_main() -> ExitCode {
     }
 
     // Save the image as a PNG
-    let png_output = img.to_rgb16();
+    let png_output = img.to_rgba16();
     match png_output.save(args.output.as_str()) {
         Ok(_) => {},
         Err(_) => {
